@@ -1,6 +1,20 @@
 const asyncHandler = require("express-async-handler");
 const userModel = require("../models/userModel");
 
+
+const generateToken=async(id)=>{
+    try {
+        const user=await userModel.findOne(id);
+        const accessToken=await user.generateAccessToken();
+        const refreshToken=await user.generateRefereshToken();
+
+        user.refreshtoken=refreshToken;
+        await user.save({validateBeforeSave:false});
+        return {accessToken,refreshToken};
+    } catch (error) {
+        res.status(500).json({message:"Something went wrong while generating referesh and access token"});
+    }
+}
 const register = asyncHandler(async (req, res) => {
     const { email, name, password } = req.body;
 
@@ -39,8 +53,34 @@ const login = asyncHandler(async (req, res) => {
     if (!verifyPassword) {
         res.status(400).json({ message: "password is wrong." });
     }
+
     const loggedUser = await userModel.findById(user._id).select("-password");
-    res.status(200).json({ message: "Login Success.", result: loggedUser });
+    const {accessToken,refreshToken}=await generateToken(loggedUser._id)
+    console.log(accessToken,refreshToken)
+    const options={
+        httpOnly:true,
+        secure:true
+    }
+    res.status(200).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json({ message: "Login Success.", result: loggedUser });
+});
+
+const logout=asyncHandler(async(req,res)=>{
+    const user=await userModel.findOneAndUpdate(
+        {_id:req.user._id},
+        {
+            $set:{refreshtoken:undefined}
+        },
+        {new:true}
+    );
+    if(!user){
+        res.status(400).json({message:"User not found for logout"});
+    }
+    
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+    res.status(200).clearCookie("accessToken",options).clearCookie("refreshToken",options).json({message:"Logout seccessfully!"});
 })
 
-module.exports = { register, login }
+module.exports = { register, login, logout }
