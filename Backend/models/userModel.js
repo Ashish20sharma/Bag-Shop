@@ -15,6 +15,25 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    contact:{
+        type:Number,
+        required:true
+    },
+    cart:
+    {
+        type:Array,
+        default:[]
+    },
+    isAdmin:{
+        type:Boolean
+    },
+    orders:{
+        type:Array,
+        default:[]
+    },
+    picture:{
+        type:String
+    },
     refreshtoken: {
         type: String,
     }
